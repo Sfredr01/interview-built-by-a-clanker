@@ -23,9 +23,10 @@ export async function favoriteRoutes(app: FastifyInstance) {
 
   app.post("/favorites", async (request, reply) => {
     const { id: userId } = request.user as { id: string };
-    const { personaId } = request.body as { personaId: string };
+    const body = request.body as { personaId?: unknown } | null | undefined;
+    const personaId = body?.personaId;
 
-    if (!personaId) {
+    if (typeof personaId !== "string" || personaId.length === 0) {
       return reply.status(400).send({ error: "personaId is required" });
     }
 
