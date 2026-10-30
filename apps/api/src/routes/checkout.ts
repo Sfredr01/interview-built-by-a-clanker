@@ -37,6 +37,10 @@ export async function checkoutRoutes(app: FastifyInstance) {
       total += persona.price * entry.quantity;
     }
 
+    if (items.length === 0) {
+      return reply.status(400).send({ error: "Cart is empty" });
+    }
+
     const order: Order = {
       id: db._nextOrderId(),
       userId,
