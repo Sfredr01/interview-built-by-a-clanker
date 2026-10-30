@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:3001";
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
 class ApiError extends Error {
   constructor(
@@ -12,6 +12,24 @@ class ApiError extends Error {
 
 function getToken(): string | null {
   return localStorage.getItem("auth_token");
+}
+
+function errorMessage(error: unknown, status: number): string {
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object") {
+    const { formErrors, fieldErrors } = error as {
+      formErrors?: string[];
+      fieldErrors?: Record<string, string[]>;
+    };
+    const messages = [
+      ...(formErrors ?? []),
+      ...Object.entries(fieldErrors ?? {}).flatMap(([field, errs]) =>
+        errs?.[0] ? [`${field}: ${errs[0]}`] : [],
+      ),
+    ];
+    if (messages.length > 0) return messages.join("; ");
+  }
+  return `Request failed: ${status}`;
 }
 
 async function request<T>(
@@ -37,7 +55,7 @@ async function request<T>(
     const body = await response.json().catch(() => ({}));
     throw new ApiError(
       response.status,
-      body.error ?? `Request failed: ${response.status}`,
+      errorMessage(body.error, response.status),
     );
   }
 
