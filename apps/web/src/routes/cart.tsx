@@ -11,7 +11,7 @@ export const Route = createFileRoute("/cart")({
 });
 
 function CartPage() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const { data: cart, isLoading } = useQuery({
@@ -23,7 +23,32 @@ function CartPage() {
   const updateQuantity = useMutation({
     mutationFn: ({ itemId, quantity }: { itemId: string; quantity: number }) =>
       api.put<Cart>(`/cart/${itemId}`, { quantity }),
-    onSuccess: () => {
+    // Same scope => requests run one at a time, in click order.
+    scope: { id: "cart-quantity" },
+    // The API only takes absolute quantities, so update the cache right away:
+    // the next click then computes from the already-updated render.
+    onMutate: async ({ itemId, quantity }) => {
+      await queryClient.cancelQueries({ queryKey: ["cart"] });
+      const previous = queryClient.getQueryData<Cart>(["cart"]);
+      queryClient.setQueryData<Cart>(["cart"], (old) => {
+        if (!old) return old;
+        const items = old.items.map((i) =>
+          i.id === itemId ? { ...i, quantity } : i,
+        );
+        const total = items.reduce(
+          (sum, i) => sum + i.persona.price * i.quantity,
+          0,
+        );
+        return { ...old, items, total: Math.round(total * 100) / 100 };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["cart"], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
     },
   });
@@ -34,6 +59,16 @@ function CartPage() {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
     },
   });
+
+  if (authLoading) {
+    return (
+      <div className="animate-pulse space-y-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="bg-white rounded-xl border p-6 h-24" />
+        ))}
+      </div>
+    );
+  }
 
   if (!user) {
     return (

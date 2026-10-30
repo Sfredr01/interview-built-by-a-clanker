@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface SearchBarProps {
   value: string;
@@ -8,18 +8,28 @@ interface SearchBarProps {
 export function SearchBar({ value, onChange }: SearchBarProps) {
   const [local, setLocal] = useState(value);
 
+  // Latest onChange without making it an effect dependency (parents pass a new inline fn each render).
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  // Last value this component emitted; a prop equal to it is our own echo, not an external change.
+  const lastEmitted = useRef(value);
+
   useEffect(() => {
-    setLocal(value);
+    if (value !== lastEmitted.current) {
+      lastEmitted.current = value;
+      setLocal(value);
+    }
   }, [value]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       if (local !== value) {
-        onChange(local);
+        lastEmitted.current = local;
+        onChangeRef.current(local);
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [local, value, onChange]);
+  }, [local, value]);
 
   return (
     <div className="relative">
@@ -47,6 +57,7 @@ export function SearchBar({ value, onChange }: SearchBarProps) {
         <button
           onClick={() => {
             setLocal("");
+            lastEmitted.current = "";
             onChange("");
           }}
           className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"

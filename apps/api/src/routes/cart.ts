@@ -47,6 +47,11 @@ export async function cartRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: "Persona not found" });
     }
 
+    const existing = db.cart.getByUserId(userId).find((i) => i.personaId === personaId);
+    if ((existing?.quantity ?? 0) + quantity > Number.MAX_SAFE_INTEGER) {
+      return reply.status(400).send({ error: "Quantity too large" });
+    }
+
     db.cart.add(userId, personaId, quantity);
     return enrichCartItems(userId);
   });
