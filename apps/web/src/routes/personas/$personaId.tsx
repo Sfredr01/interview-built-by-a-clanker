@@ -40,8 +40,8 @@ function PersonaDetailPage() {
   const toggleFavorite = useMutation({
     mutationFn: () =>
       !isFavorited
-        ? api.delete(`/favorites/${personaId}`)
-        : api.post("/favorites", { personaId }),
+        ? api.post("/favorites", { personaId })
+        : api.delete(`/favorites/${personaId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["favorites"] });
     },
