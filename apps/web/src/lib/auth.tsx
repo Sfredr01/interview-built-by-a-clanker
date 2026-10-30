@@ -33,18 +33,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    let cancelled = false;
+
     api
       .get<User>("/auth/me")
       .then((u) => {
-        setUser(u);
+        if (!cancelled) setUser(u);
       })
       .catch((err) => {
+        if (cancelled) return;
         if (err instanceof ApiError && err.status === 401) {
           localStorage.removeItem("auth_token");
           setToken(null);
         }
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
   const login = useCallback((response: AuthResponse) => {
