@@ -15,13 +15,20 @@ export interface SearchParams {
   sort?: string;
 }
 
+// 0 is a valid price; only absent, empty or non-numeric values are unset.
+function toPrice(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): SearchParams => ({
     q: (search.q as string) || undefined,
     specialty: (search.specialty as string) || undefined,
     tier: (search.tier as string) || undefined,
-    minPrice: search.minPrice ? Number(search.minPrice) : undefined,
-    maxPrice: search.maxPrice ? Number(search.maxPrice) : undefined,
+    minPrice: toPrice(search.minPrice),
+    maxPrice: toPrice(search.maxPrice),
     sort: (search.sort as string) || undefined,
   }),
   component: BrowsePage,
@@ -35,8 +42,8 @@ function BrowsePage() {
   if (search.q) queryString.set("q", search.q);
   if (search.specialty) queryString.set("specialty", search.specialty);
   if (search.tier) queryString.set("tier", search.tier);
-  if (search.minPrice) queryString.set("minPrice", String(search.minPrice));
-  if (search.maxPrice) queryString.set("maxPrice", String(search.maxPrice));
+  if (search.minPrice !== undefined) queryString.set("minPrice", String(search.minPrice));
+  if (search.maxPrice !== undefined) queryString.set("maxPrice", String(search.maxPrice));
   if (search.sort) queryString.set("sort", search.sort);
 
   const { data: personas = [], isLoading } = useQuery({
